@@ -221,7 +221,12 @@ public class PropertiesConfigurationBuilder extends ConfigurationBuilderFactory
     }
 
     private AppenderComponentBuilder createAppender(final String key, final Properties properties) {
-        final String name = (String) properties.remove(CONFIG_NAME);
+        final String name;
+        if (properties.containsKey(CONFIG_NAME)) {
+            name = (String) properties.remove(CONFIG_NAME);
+        } else {
+            name = key;
+        }
         if (Strings.isEmpty(name)) {
             throw new ConfigurationException("No name attribute provided for Appender " + key);
         }
