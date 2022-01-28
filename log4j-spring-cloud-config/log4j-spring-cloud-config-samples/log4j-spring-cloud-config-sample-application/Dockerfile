@@ -16,7 +16,7 @@
 #
 # Alpine Linux with OpenJDK
 #FROM openjdk:8-jdk-alpine
-FROM openjdk:11-jdk-slim
+FROM openjdk:17-ea-3-jdk-oraclelinux8
 
 ARG build_version
 ENV BUILD_VERSION=${build_version}
