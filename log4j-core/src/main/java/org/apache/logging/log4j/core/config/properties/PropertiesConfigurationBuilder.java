@@ -17,10 +17,6 @@
 
 package org.apache.logging.log4j.core.config.properties;
 
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -44,6 +40,10 @@ import org.apache.logging.log4j.core.filter.AbstractFilter.AbstractFilterBuilder
 import org.apache.logging.log4j.core.util.Builder;
 import org.apache.logging.log4j.util.PropertiesUtil;
 import org.apache.logging.log4j.util.Strings;
+
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Helper builder for parsing properties files into a PropertiesConfiguration.
@@ -170,17 +170,20 @@ public class PropertiesConfigurationBuilder extends ConfigurationBuilderFactory
                 }
             }
         } else {
-            final Map<String, Properties> loggers = PropertiesUtil
-                    .partitionOnCommonPrefixes(PropertiesUtil.extractSubset(rootProperties, "logger"));
+            final Properties context = PropertiesUtil.extractSubset(rootProperties, "logger");
+            final Map<String, Properties> loggers = PropertiesUtil.partitionOnCommonPrefixes(context);
             for (final Map.Entry<String, Properties> entry : loggers.entrySet()) {
                 final String name = entry.getKey().trim();
                 if (!name.equals(LoggerConfig.ROOT)) {
-                    builder.add(createLogger(name, entry.getValue()));
+                    final Properties loggerProps = entry.getValue();
+                    useSyntheticLevelAndAppenderRefs(name, loggerProps, context);
+                    builder.add(createLogger(name, loggerProps));
                 }
             }
         }
 
         final Properties props = PropertiesUtil.extractSubset(rootProperties, "rootLogger");
+        useSyntheticLevelAndAppenderRefs("rootLogger", props, rootProperties);
         if (props.size() > 0) {
             builder.add(createRootLogger(props));
         }
@@ -188,6 +191,17 @@ public class PropertiesConfigurationBuilder extends ConfigurationBuilderFactory
         builder.setLoggerContext(loggerContext);
 
         return builder.build(false);
+    }
+
+    private static void useSyntheticLevelAndAppenderRefs(final String propertyName, final Properties loggerProps, final Properties context) {
+        final String propertyValue = (String) context.remove(propertyName);
+        if (propertyValue != null) {
+            final String[] parts = propertyValue.split(",");
+            loggerProps.setProperty("level", parts[0]);
+            for (int i = 1; i < parts.length; i++) {
+                loggerProps.setProperty("appenderRef.$" + i + ".ref", parts[i]);
+            }
+        }
     }
 
     private ScriptComponentBuilder createScript(final Properties properties) {
